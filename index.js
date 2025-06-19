@@ -7,8 +7,8 @@ const MONGO_URI =
   "mongodb+srv://swsd:swsd@swsd.pabntrq.mongodb.net/?retryWrites=true&w=majority";
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(cors()); // Allow cross-origin requests
 
 // MongoDB Connection
 const client = new MongoClient(MONGO_URI, {
@@ -17,32 +17,34 @@ const client = new MongoClient(MONGO_URI, {
   serverApi: ServerApiVersion.v1,
 });
 
-let db;
-client
-  .connect()
-  .then(() => {
-    db = client.db("swsd");
-    console.log("Connected to MongoDB");
-  })
-  .catch((err) => console.error("MongoDB connection error:", err));
-
-// Redirect Endpoint
-app.get("/contacts", async (req, res) => {
+async function run() {
   try {
-    const contactsCollection = db.collection("contacts");
+    const contactsCollection = client.db("swsd").collection("contacts");
 
-    const contacts = await contactsCollection.find({}).toArray();
 
-    res.send(contacts);
-  } catch (error) {
-    console.error("Error fetching contact:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+  app.get("/contacts", async (req, res) => {
+   try {
+     const contacts = await contactsCollection.find({}).toArray();
+
+     res.send(contacts);
+   } catch (error) {
+     console.error("Error fetching contact:", error);
+     res.status(500).json({ error: "Internal Server Error" });
+   }
+ });
+
+
+  } finally {
+    // Optional: Can handle client connection closing here if necessary.
   }
-});
+}
 
-// Start Server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("Welcome to the SWSD Server");
+  res.send("Server is running");
+});
+
+app.listen(PORT, () => {
+  console.log("Listening at port", PORT);
 });
